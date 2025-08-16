@@ -145,45 +145,24 @@ REST_FRAMEWORK = {
 }
 
 
-REST_AUTH = {
-    'USE_JWT': True,
-    'JWT_AUTH_COOKIE': 'jwt-auth',
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'dj_rest_auth.jwt_auth.JWTCookieAuthentication',  # Use cookie-based JWT auth
+    ),
 }
 
 REST_AUTH = {
-    'LOGIN_SERIALIZER': 'api.serializers.LoginSerializer',
-    'TOKEN_SERIALIZER': 'dj_rest_auth.serializers.TokenSerializer',
-    'JWT_SERIALIZER': 'dj_rest_auth.serializers.JWTSerializer',
-    'JWT_SERIALIZER_WITH_EXPIRATION': 'dj_rest_auth.serializers.JWTSerializerWithExpiration',
-    'JWT_TOKEN_CLAIMS_SERIALIZER': 'rest_framework_simplejwt.serializers.TokenObtainPairSerializer',
-    'USER_DETAILS_SERIALIZER': 'dj_rest_auth.serializers.UserDetailsSerializer',
-    'PASSWORD_RESET_SERIALIZER': 'dj_rest_auth.serializers.PasswordResetSerializer',
-    'PASSWORD_RESET_CONFIRM_SERIALIZER': 'dj_rest_auth.serializers.PasswordResetConfirmSerializer',
-    'PASSWORD_CHANGE_SERIALIZER': 'dj_rest_auth.serializers.PasswordChangeSerializer',
-
-    'REGISTER_SERIALIZER': 'dj_rest_auth.registration.serializers.RegisterSerializer',
-
-    'REGISTER_PERMISSION_CLASSES': ('rest_framework.permissions.AllowAny',),
-
-    'TOKEN_MODEL': 'rest_framework.authtoken.models.Token',
-    'TOKEN_CREATOR': 'dj_rest_auth.utils.default_create_token',
-
-    'PASSWORD_RESET_USE_SITES_DOMAIN': False,
-    'OLD_PASSWORD_FIELD_ENABLED': False,
-    'LOGOUT_ON_PASSWORD_CHANGE': False,
-    'SESSION_LOGIN': True,
-    'USE_JWT': False,
-
-    'JWT_AUTH_COOKIE': None,
-    'JWT_AUTH_REFRESH_COOKIE': None,
-    'JWT_AUTH_REFRESH_COOKIE_PATH': '/',
-    'JWT_AUTH_SECURE': False,
-    'JWT_AUTH_HTTPONLY': True,
-    'JWT_AUTH_SAMESITE': 'Lax',
-    'JWT_AUTH_RETURN_EXPIRATION': False,
-    'JWT_AUTH_COOKIE_USE_CSRF': False,
-    'JWT_AUTH_COOKIE_ENFORCE_CSRF_ON_UNAUTHENTICATED': False,
+    'USE_JWT': True,  # Enable JWT
+    'JWT_AUTH_COOKIE': 'jwt-auth',  # Name of the auth cookie
+    'JWT_AUTH_REFRESH_COOKIE': 'jwt-refresh-token',  # Name for refresh token cookie
+    'JWT_AUTH_COOKIE_SECURE': True,      # Only send cookie over HTTPS
+    'JWT_AUTH_HTTPONLY': True,           # HTTP only (not accessible via JS)
+    'JWT_AUTH_SAMESITE': 'Lax',          # CSRF protection; can be 'Strict', 'Lax', or 'None'
+    # 'JWT_AUTH_COOKIE_DOMAIN': '.yourdomain.com',  # Set domain if needed
+    # 'JWT_AUTH_COOKIE_PATH': '/',        # Cookie path
 }
+
+CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Allow your frontend (e.g., React app running on localhost)

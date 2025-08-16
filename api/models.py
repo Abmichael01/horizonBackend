@@ -39,3 +39,25 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
+class Department(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    short = models.CharField(max_length=3, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+class StudentProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student_profile')
+    full_name = models.CharField(max_length=100)
+    matric_number = models.CharField(max_length=20, unique=True)
+    dob = models.DateField(verbose_name='Date of Birth')
+    cgpa = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+    phone = models.CharField(max_length=20, blank=True)
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
+    level = models.PositiveIntegerField(default=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.full_name} ({self.matric_number})"
+
