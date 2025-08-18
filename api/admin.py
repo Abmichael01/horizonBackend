@@ -18,3 +18,18 @@ class StudentProfileAdmin(admin.ModelAdmin):
     search_fields = ('full_name', 'matric_number')
     list_filter = ('department', 'level')
     ordering = ('matric_number',)
+    
+@admin.register(AcademicSession)
+class AcademicSessionAdmin(admin.ModelAdmin):
+    list_display = ('session_name', 'start_date', 'end_date')
+    
+
+@admin.register(Course)
+class CourseAdmin(admin.ModelAdmin):
+    list_display = ('code', 'title', 'department', 'semester')
+    
+
+admin.site.register([
+    Semester,
+    Faculty,
+])

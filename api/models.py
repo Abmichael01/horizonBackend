@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.utils import timezone
 
 
 class UserManager(BaseUserManager):
@@ -30,7 +31,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
-
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
     objects = UserManager()
 
     USERNAME_FIELD = 'email'  # Email will be the unique identifier for login
@@ -39,13 +40,45 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
+
+class AcademicSession(models.Model):
+    session_name = models.CharField(max_length=255)  # E.g., "Fall 2025", "Spring 2025"
+    start_date = models.DateField()  # Start date of the academic session
+    end_date = models.DateField()  # End date of the academic session
+    is_current = models.BooleanField(default=False)  # Mark if session is the current active session
+
+    def save(self, *args, **kwargs):
+        # Ensure only one session is "current" at a time
+        if self.is_current:
+            # Set all other sessions to not be current
+            AcademicSession.objects.exclude(id=self.id).update(is_current=False)
+        
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.session_name} (Current: {self.is_current})"
+
+    class Meta:
+        ordering = ['-start_date'] 
+
+
+class Faculty(models.Model):
+    name = models.CharField(max_length=100, unique=True)  # Name of the Faculty (e.g., "Engineering")
+    created_at = models.DateTimeField(auto_now_add=True)  # Date the faculty was created
+    short = models.CharField(max_length=3, unique=True, null=True)
+
+    def __str__(self):
+        return self.name
+
 class Department(models.Model):
     name = models.CharField(max_length=100, unique=True)
     short = models.CharField(max_length=3, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    faculty = models.ForeignKey(Faculty, related_name='departments', on_delete=models.CASCADE, null=True)
 
     def __str__(self):
         return self.name
+
 
 class StudentProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student_profile')
@@ -61,3 +94,42 @@ class StudentProfile(models.Model):
     def __str__(self):
         return f"{self.full_name} ({self.matric_number})"
 
+class Semester(models.Model):
+    name = models.CharField(max_length=255)  # Admin can name the semester (e.g., "Fall 2025")
+    is_current = models.BooleanField(default=False)  # Mark the current active semester
+
+    class Meta:
+        ordering = ['-name']  # Order semesters by name (e.g., to have the most recent ones first)
+
+    def __str__(self):
+        return f"{self.name} (Current: {self.is_current})"
+
+    def save(self, *args, **kwargs):
+        # Ensure only one semester is marked as current
+        if self.is_current:
+            # Set all other semesters to not be current
+            Semester.objects.exclude(id=self.id).update(is_current=False)
+        
+        super().save(*args, **kwargs)
+
+class Course(models.Model):
+    code = models.CharField(max_length=10, unique=True)  # Unique code for the course, e.g., "CS101"
+    title = models.CharField(max_length=255)  # Title of the course, e.g., "Introduction to Computer Science"
+    units = models.PositiveIntegerField()  # Units of the course (e.g., 3 units)
+    department = models.ForeignKey(
+        Department, 
+        related_name='courses', 
+        on_delete=models.CASCADE
+    )  # Link the course to a department
+    semester = models.ForeignKey(
+        Semester, 
+        related_name='courses', 
+        on_delete=models.CASCADE,
+        null=True
+    )  # L
+
+    def __str__(self):
+        return f"{self.code} - {self.title}"
+
+    class Meta:
+        ordering = ['code']  # Order courses by their code

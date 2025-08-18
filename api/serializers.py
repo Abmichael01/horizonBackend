@@ -1,7 +1,12 @@
 # serializers.py
 from django.contrib.auth import authenticate
 from rest_framework import serializers
-from .models import Department, StudentProfile
+from .models import *
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["email", "date_joined"]
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -21,17 +26,37 @@ class LoginSerializer(serializers.Serializer):
         data["user"] = user
         return data
 
+class AcademicSessionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AcademicSession
+        fields = ['session_name', 'start_date', 'end_date']
+        
+class FacultySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Faculty
+        fields = ['id', 'name']
 
 class DepartmentSerializer(serializers.ModelSerializer):
+    faculty = FacultySerializer(read_only=True)
     class Meta:
         model = Department
-        fields = ['id', 'name', 'short', 'created_at']
+        fields = ['id', 'name', 'short', 'created_at', 'faculty']
+        
+class CourseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Course
+        fields = ['id', 'code', 'title', 'units', 'department']        
+
+
+        
+        
 
 class StudentProfileSerializer(serializers.ModelSerializer):
     department = DepartmentSerializer(read_only=True)
     department_id = serializers.PrimaryKeyRelatedField(
         queryset=Department.objects.all(), source='department', write_only=True
     )
+    user = UserSerializer(read_only=True)
 
     class Meta:
         model = StudentProfile
@@ -48,3 +73,4 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             'level',
             'created_at',
         ]
+        
