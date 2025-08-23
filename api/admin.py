@@ -32,4 +32,7 @@ class CourseAdmin(admin.ModelAdmin):
 admin.site.register([
     Semester,
     Faculty,
+    CourseEnrollment,
+    CourseRegistration,
+    Level,
 ])

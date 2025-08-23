@@ -80,15 +80,25 @@ class Department(models.Model):
         return self.name
 
 
+class Level(models.Model):
+    """
+    Represents a student/class level, e.g., 100, 200, 300, etc.
+    """
+    name = models.PositiveIntegerField(unique=True)  # e.g., 100, 200, 300
+
+    def __str__(self):
+        return f"{self.name} Level"
+
+
 class StudentProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student_profile')
     full_name = models.CharField(max_length=100)
     matric_number = models.CharField(max_length=20, unique=True)
     dob = models.DateField(verbose_name='Date of Birth')
     cgpa = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
-    phone = models.CharField(max_length=20, blank=True)
+    phone = models.CharField(max_length=20, blank=True)      
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
-    level = models.PositiveIntegerField(default=100)
+    level = models.ForeignKey(Level, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -126,10 +136,96 @@ class Course(models.Model):
         related_name='courses', 
         on_delete=models.CASCADE,
         null=True
-    )  # L
-
+    )  # Link the course to a semester
+    level = models.ForeignKey(
+        Level,
+        related_name='courses',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Level for which this course is intended (e.g., 100, 200, etc.)"
+    )  # Link the course to a level
+    
     def __str__(self):
         return f"{self.code} - {self.title}"
 
     class Meta:
         ordering = ['code']  # Order courses by their code
+        
+class CourseEnrollment(models.Model):
+    student = models.ForeignKey(
+        StudentProfile, 
+        on_delete=models.CASCADE, 
+        related_name='course_enrollments'
+    )
+    course = models.ForeignKey(
+        Course, 
+        on_delete=models.CASCADE, 
+        related_name='course_enrollments'
+    )
+    grade = models.CharField(max_length=2)  # A, B, C, D, F, etc.
+    grade_point = models.DecimalField(
+        max_digits=3, 
+        decimal_places=2
+    )  # 4.0, 3.7, etc.
+    academic_session = models.ForeignKey(
+        AcademicSession,
+        on_delete=models.CASCADE,
+        related_name='course_enrollments'
+    )
+    semester = models.ForeignKey(
+        Semester,
+        on_delete=models.CASCADE,
+        related_name='student_results'
+    )
+    date_recorded = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ['student', 'course', 'academic_session', 'semester']
+        ordering = ['-date_recorded']
+        
+    def __str__(self):
+        return f"{self.student.full_name} - {self.course.code}: {self.grade}"
+    
+    @property
+    def total_grade_points(self):
+        """Calculate total grade points (grade_point * course_units)"""
+        return self.grade_point * self.course.units
+
+
+class CourseRegistration(models.Model):
+    student = models.ForeignKey(
+        StudentProfile, 
+        on_delete=models.CASCADE, 
+        related_name='course_registrations'
+    )
+    academic_session = models.ForeignKey(
+        AcademicSession,
+        on_delete=models.CASCADE,
+        related_name='course_registrations'
+    )
+    semester = models.ForeignKey(
+        Semester,
+        on_delete=models.CASCADE,
+        related_name='course_registrations'
+    )
+    courses = models.ManyToManyField(
+        CourseEnrollment,
+        related_name='course_registrations',
+        blank=True
+    )
+    enrollment_date = models.DateTimeField(auto_now_add=True)
+    total_units = models.PositiveIntegerField(default=0)
+    semester_gpa = models.DecimalField(
+        max_digits=4, 
+        decimal_places=2, 
+        null=True, 
+        blank=True
+    )
+    
+    class Meta:
+        unique_together = ['student', 'academic_session', 'semester']
+        ordering = ['-enrollment_date']
+        
+    def __str__(self):
+        return f"{self.student.full_name} - {self.academic_session.session_name} {self.semester.name}"
