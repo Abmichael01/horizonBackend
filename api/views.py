@@ -4,7 +4,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from .serializers import *
-from .models import *
+from .models.models import *
 
 User = get_user_model()
 

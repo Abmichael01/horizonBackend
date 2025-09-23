@@ -1,13 +1,15 @@
 # serializers.py
 from django.contrib.auth import authenticate
 from rest_framework import serializers
-from .models import *
+from .models.models import *
 from datetime import datetime
 
 class UserSerializer(serializers.ModelSerializer):
+    user_type = serializers.ReadOnlyField()
+    
     class Meta:
         model = User
-        fields = ["email", "date_joined"]
+        fields = ["email", "date_joined", "user_type"]
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -104,20 +106,24 @@ class CourseRegistrationSerializer(serializers.ModelSerializer):
 class CreateUserSerializer(serializers.Serializer):
     USER_TYPE_CHOICES = (
         ('student', 'Student'),
-        # Add other user types if needed
+        ('lecturer', 'Lecturer'),
     )
     user_type = serializers.ChoiceField(choices=USER_TYPE_CHOICES)
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
     full_name = serializers.CharField(max_length=100)
-    dob = serializers.DateField()
     phone = serializers.CharField(max_length=20, allow_blank=True, required=False)
     department = serializers.PrimaryKeyRelatedField(
         queryset=Department.objects.all()
     )
+    # Student specific fields
+    dob = serializers.DateField(required=False)
     level = serializers.PrimaryKeyRelatedField(
-        queryset=Level.objects.all()
+        queryset=Level.objects.all(),
+        required=False
     )
+    # Lecturer specific fields
+    specialization = serializers.CharField(max_length=200, allow_blank=True, required=False)
 
     def validate(self, attrs):
         # You can add custom validation here if needed
@@ -156,6 +162,14 @@ class CreateUserSerializer(serializers.Serializer):
                 department=validated_data.get('department'),
                 level=validated_data.get('level'),
             )
-        # If you want to handle other user types, add here
+        elif user_type == 'lecturer':
+            from .models.models import LecturerProfile
+            LecturerProfile.objects.create(
+                user=user,
+                full_name=validated_data.get('full_name'),
+                phone=validated_data.get('phone', ''),
+                department=validated_data.get('department'),
+                specialization=validated_data.get('specialization', ''),
+            )
 
         return user

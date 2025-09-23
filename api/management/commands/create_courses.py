@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from api.models import Department, Course, Semester
+from api.models.models import Department, Course, Semester
 
 class Command(BaseCommand):
     help = 'Delete all previous courses and create 10 new courses for each department, linking them to the two semesters.'

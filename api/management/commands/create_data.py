@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from api.models import Faculty, Department
+from api.models.models import Faculty, Department
 from django.db import IntegrityError
 
 class Command(BaseCommand):

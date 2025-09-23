@@ -39,6 +39,15 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+    
+    @property
+    def user_type(self):
+        """Determine if user is a student or lecturer based on their profile"""
+        if hasattr(self, 'student_profile'):
+            return 'student'
+        elif hasattr(self, 'lecturer_profile'):
+            return 'lecturer'
+        return None
 
 
 class AcademicSession(models.Model):
@@ -145,6 +154,12 @@ class Course(models.Model):
         blank=True,
         help_text="Level for which this course is intended (e.g., 100, 200, etc.)"
     )  # Link the course to a level
+    assigned_lecturers = models.ManyToManyField(
+        'LecturerProfile',
+        related_name='assigned_courses',
+        blank=True,
+        help_text="Lecturers assigned to teach this course"
+    )
     
     def __str__(self):
         return f"{self.code} - {self.title}"
@@ -229,3 +244,4 @@ class CourseRegistration(models.Model):
         
     def __str__(self):
         return f"{self.student.full_name} - {self.academic_session.session_name} {self.semester.name}"
+

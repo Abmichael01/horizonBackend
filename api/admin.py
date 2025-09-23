@@ -29,6 +29,14 @@ class CourseAdmin(admin.ModelAdmin):
     list_display = ('code', 'title', 'department', 'semester')
     
 
+@admin.register(LecturerProfile)
+class LecturerProfileAdmin(admin.ModelAdmin):
+    list_display = ('id', 'full_name', 'department', 'specialization', 'created_at')
+    search_fields = ('id', 'full_name')
+    list_filter = ('department', 'created_at')
+    ordering = ('id',)
+    readonly_fields = ('id',)
+
 admin.site.register([
     Semester,
     Faculty,
