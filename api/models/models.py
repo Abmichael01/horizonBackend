@@ -84,6 +84,14 @@ class Department(models.Model):
     short = models.CharField(max_length=3, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     faculty = models.ForeignKey(Faculty, related_name='departments', on_delete=models.CASCADE, null=True)
+    hod = models.ForeignKey(
+        'LecturerProfile',
+        related_name='hod_of_department',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Head of Department"
+    )
 
     def __str__(self):
         return self.name
@@ -160,9 +168,21 @@ class Course(models.Model):
         blank=True,
         help_text="Lecturers assigned to teach this course"
     )
+    borrowing_departments = models.ManyToManyField(
+        Department,
+        related_name='borrowed_courses',
+        blank=True,
+        help_text="Other departments that can register students for this course"
+    )
     
     def __str__(self):
         return f"{self.code} - {self.title}"
+    
+    def get_all_departments(self):
+        """Return all departments that can access this course (owner + borrowing)"""
+        departments = [self.department]
+        departments.extend(list(self.borrowing_departments.all()))
+        return departments
 
     class Meta:
         ordering = ['code']  # Order courses by their code
@@ -244,4 +264,128 @@ class CourseRegistration(models.Model):
         
     def __str__(self):
         return f"{self.student.full_name} - {self.academic_session.session_name} {self.semester.name}"
+
+class Assignment(models.Model):
+    """
+    Represents an assignment for a course
+    """
+    ASSIGNMENT_TYPES = [
+        ('text', 'Text Submission'),
+        ('file', 'File Upload'),
+        ('url', 'URL Submission'),
+        ('mixed', 'Mixed (Text + File)'),
+    ]
+    
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        related_name='assignments'
+    )
+    title = models.CharField(max_length=255)
+    description = models.TextField(help_text="Assignment description and instructions")
+    assignment_type = models.CharField(
+        max_length=10,
+        choices=ASSIGNMENT_TYPES,
+        default='text'
+    )
+    max_points = models.PositiveIntegerField(default=100)
+    due_date = models.DateTimeField()
+    created_by = models.ForeignKey(
+        "LecturerProfile",
+        on_delete=models.CASCADE,
+        related_name='created_assignments'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_published = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.course.code} - {self.title}"
+
+class AssignmentSubmission(models.Model):
+    """
+    Represents a student's submission for an assignment
+    """
+    SUBMISSION_STATUS = [
+        ('draft', 'Draft'),
+        ('submitted', 'Submitted'),
+        ('graded', 'Graded'),
+        ('late', 'Late'),
+    ]
+    
+    assignment = models.ForeignKey(
+        Assignment,
+        on_delete=models.CASCADE,
+        related_name='submissions'
+    )
+    student = models.ForeignKey(
+        StudentProfile,
+        on_delete=models.CASCADE,
+        related_name='assignment_submissions'
+    )
+    text_content = models.TextField(blank=True, null=True)
+    file_upload = models.FileField(upload_to='assignments/', blank=True, null=True)
+    url_submission = models.URLField(blank=True, null=True)
+    status = models.CharField(
+        max_length=10,
+        choices=SUBMISSION_STATUS,
+        default='draft'
+    )
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    grade = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    feedback = models.TextField(blank=True, null=True)
+    graded_by = models.ForeignKey(
+        "LecturerProfile",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='graded_submissions'
+    )
+    graded_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['assignment', 'student']
+        ordering = ['-submitted_at']
+    
+    def __str__(self):
+        return f"{self.student.full_name} - {self.assignment.title}"
+
+class Announcement(models.Model):
+    """
+    Represents an announcement that can be course-specific or general
+    """
+    title = models.CharField(max_length=255)
+    content = models.TextField()
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        related_name='announcements',
+        null=True,
+        blank=True,
+        help_text="Leave blank for general announcements"
+    )
+    is_general = models.BooleanField(
+        default=False,
+        help_text="True for general announcements, False for course-specific"
+    )
+    created_by = models.ForeignKey(
+        "LecturerProfile",
+        on_delete=models.CASCADE,
+        related_name='created_announcements'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        if self.course:
+            return f"{self.course.code} - {self.title}"
+        return f"General - {self.title}"
 

@@ -1,15 +1,20 @@
 # serializers.py
 from django.contrib.auth import authenticate
 from rest_framework import serializers
-from .models.models import *
+from .models import *
 from datetime import datetime
 
 class UserSerializer(serializers.ModelSerializer):
-    user_type = serializers.ReadOnlyField()
+    user_type = serializers.SerializerMethodField()
     
     class Meta:
         model = User
         fields = ["email", "date_joined", "user_type"]
+    
+    def get_user_type(self, obj):
+        return obj.user_type
+
+    
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -51,9 +56,12 @@ class LevelSerializer(serializers.ModelSerializer):
         fields = ['id', 'name']
         
 class CourseSerializer(serializers.ModelSerializer):
+    level = serializers.StringRelatedField(source='level.name', read_only=True)
+    department = serializers.StringRelatedField(source='department.name', read_only=True)
+    
     class Meta:
         model = Course
-        fields = ['id', 'code', 'title', 'units', 'department']        
+        fields = ['id', 'code', 'title', 'units', 'department', 'level']        
 
 class SemesterSerializer(serializers.ModelSerializer):
     class Meta:
@@ -84,6 +92,85 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             'created_at',
         ]
 
+class LecturerProfileSerializer(serializers.ModelSerializer):
+    department = DepartmentSerializer(read_only=True)
+    department_id = serializers.PrimaryKeyRelatedField(
+        queryset=Department.objects.all(), source='department', write_only=True
+    )
+    user = UserSerializer(read_only=True)
+    staff_id = serializers.CharField(source='id', read_only=True)
+
+    class Meta:
+        model = LecturerProfile
+        fields = [
+            'id',
+            'user',
+            'full_name',
+            'phone',
+            'department',
+            'department_id',
+            'specialization',
+            'staff_id',
+            'created_at',
+        ]
+
+class AssignmentSerializer(serializers.ModelSerializer):
+    course = CourseSerializer(read_only=True)
+    course_id = serializers.PrimaryKeyRelatedField(
+        queryset=Course.objects.all(), source='course', write_only=True
+    )
+    created_by = LecturerProfileSerializer(read_only=True)
+    created_by_id = serializers.PrimaryKeyRelatedField(
+        queryset=LecturerProfile.objects.all(), source='created_by', write_only=True, required=False
+    )
+    submissions_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Assignment
+        fields = [
+            'id',
+            'course',
+            'course_id',
+            'title',
+            'description',
+            'assignment_type',
+            'max_points',
+            'due_date',
+            'created_by',
+            'created_by_id',
+            'created_at',
+            'updated_at',
+            'is_published',
+            'submissions_count',
+        ]
+    
+    def get_submissions_count(self, obj):
+        return obj.submissions.count()
+
+class AssignmentSubmissionSerializer(serializers.ModelSerializer):
+    assignment = AssignmentSerializer(read_only=True)
+    student = StudentProfileSerializer(read_only=True)
+    graded_by = LecturerProfileSerializer(read_only=True)
+    
+    class Meta:
+        model = AssignmentSubmission
+        fields = [
+            'id',
+            'assignment',
+            'student',
+            'text_content',
+            'file_upload',
+            'url_submission',
+            'status',
+            'submitted_at',
+            'grade',
+            'feedback',
+            'graded_by',
+            'graded_at',
+            'created_at',
+            'updated_at',
+        ]
+
 class CourseEnrollmentSerializer(serializers.ModelSerializer):
     course = CourseSerializer(read_only=True)
     # student = StudentProfileSerializer(read_only=True)
@@ -102,6 +189,32 @@ class CourseRegistrationSerializer(serializers.ModelSerializer):
 
 
 
+
+class AnnouncementSerializer(serializers.ModelSerializer):
+    course = CourseSerializer(read_only=True)
+    course_id = serializers.PrimaryKeyRelatedField(
+        queryset=Course.objects.all(), source='course', write_only=True, required=False, allow_null=True
+    )
+    created_by = LecturerProfileSerializer(read_only=True)
+    created_by_id = serializers.PrimaryKeyRelatedField(
+        queryset=LecturerProfile.objects.all(), source='created_by', write_only=True, required=False
+    )
+    
+    class Meta:
+        model = Announcement
+        fields = [
+            'id',
+            'title',
+            'content',
+            'course',
+            'course_id',
+            'is_general',
+            'created_by',
+            'created_by_id',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['created_by', 'created_at', 'updated_at']
 
 class CreateUserSerializer(serializers.Serializer):
     USER_TYPE_CHOICES = (
@@ -163,7 +276,6 @@ class CreateUserSerializer(serializers.Serializer):
                 level=validated_data.get('level'),
             )
         elif user_type == 'lecturer':
-            from .models.models import LecturerProfile
             LecturerProfile.objects.create(
                 user=user,
                 full_name=validated_data.get('full_name'),

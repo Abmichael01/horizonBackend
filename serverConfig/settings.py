@@ -160,6 +160,9 @@ REST_AUTH = {
     'JWT_AUTH_SAMESITE': 'Lax',          # CSRF protection; can be 'Strict', 'Lax', or 'None'
     # 'JWT_AUTH_COOKIE_DOMAIN': '.yourdomain.com',  # Set domain if needed
     # 'JWT_AUTH_COOKIE_PATH': '/',        # Cookie path
+    
+    # Custom serializers
+    'USER_DETAILS_SERIALIZER': 'api.serializers.UserSerializer',
 }
 
 CORS_ALLOW_CREDENTIALS = True
